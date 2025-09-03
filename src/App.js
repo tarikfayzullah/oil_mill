@@ -1,22 +1,17 @@
 import { useState } from "react";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import RawMaterial from "./pages/RawMaterial";
 import OilProduction from "./pages/OilProduction";
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState("dashboard");
-
-  if (!isLoggedIn) return <Login onLogin={() => setIsLoggedIn(true)} />;
+export default function App() {
+  const [view, setView] = useState("dashboard"); // "dashboard", "rawMaterial", "oilProduction"
+  const [editProductionIndex, setEditProductionIndex] = useState(null);
 
   return (
     <>
-      {view === "dashboard" && <Dashboard setView={setView} />}
+      {view === "dashboard" && <Dashboard setView={setView} setEditProductionIndex={setEditProductionIndex} />}
       {view === "rawMaterial" && <RawMaterial setView={setView} />}
-      {view === "oilProduction" && <OilProduction setView={setView} />}
+      {view === "oilProduction" && <OilProduction setView={setView} editIndex={editProductionIndex} setEditIndex={setEditProductionIndex} />}
     </>
   );
 }
-
-export default App;

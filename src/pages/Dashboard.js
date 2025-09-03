@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
 
-export default function Dashboard({ setView }) {
+export default function Dashboard({ setView, setEditProductionIndex }) {
   const [productions, setProductions] = useState([]);
 
   useEffect(() => {
-    const savedProductions = JSON.parse(localStorage.getItem("productions")) || [];
-    setProductions(savedProductions);
+    const saved = JSON.parse(localStorage.getItem("productions")) || [];
+    setProductions(saved.map(p => ({
+      ...p,
+      quantity: Number(p.quantity),
+      oilProduced: Number(p.oilProduced),
+      mealProduced: Number(p.mealProduced),
+      loss: Number(p.loss),
+      productionCost: Number(p.productionCost),
+      totalCost: Number(p.totalCost)
+    })));
   }, []);
+
+  const handleEdit = (index) => {
+    setEditProductionIndex(index);
+    setView("oilProduction");
+  };
 
   const handleDelete = (index) => {
     if (!window.confirm("আপনি কি এই এন্ট্রি মুছে দিতে চান?")) return;
@@ -15,33 +28,14 @@ export default function Dashboard({ setView }) {
     localStorage.setItem("productions", JSON.stringify(updated));
   };
 
-  const handleEdit = (index) => {
-    const prod = productions[index];
-    const newQuantity = prompt("Quantity Used (kg)", prod.quantity);
-    if (newQuantity === null) return;
-
-    const factor = Number(newQuantity) / Number(prod.quantity);
-    const updatedProd = {
-      ...prod,
-      quantity: Number(newQuantity),
-      oilProduced: prod.oilProduced * factor,
-      mealProduced: prod.mealProduced * factor,
-      loss: prod.loss * factor,
-      totalCost: prod.totalCost * factor
-    };
-
-    const updatedProductions = [...productions];
-    updatedProductions[index] = updatedProd;
-    setProductions(updatedProductions);
-    localStorage.setItem("productions", JSON.stringify(updatedProductions));
-  };
-
-  // Summary calculation
-  const totalQuantity = productions.reduce((sum, p) => sum + p.quantity, 0);
-  const totalOil = productions.reduce((sum, p) => sum + p.oilProduced, 0);
-  const totalMeal = productions.reduce((sum, p) => sum + p.mealProduced, 0);
-  const totalLoss = productions.reduce((sum, p) => sum + p.loss, 0);
-  const totalCost = productions.reduce((sum, p) => sum + p.totalCost, 0);
+  const summary = productions.reduce((acc, p) => {
+    acc.quantity += p.quantity;
+    acc.oil += p.oilProduced;
+    acc.meal += p.mealProduced;
+    acc.loss += p.loss;
+    acc.cost += p.totalCost;
+    return acc;
+  }, { quantity: 0, oil: 0, meal: 0, loss: 0, cost: 0 });
 
   return (
     <div style={{ padding: "20px" }}>
@@ -55,7 +49,7 @@ export default function Dashboard({ setView }) {
           <tr>
             <th>Date</th>
             <th>Material</th>
-            <th>Quantity Used</th>
+            <th>Quantity</th>
             <th>Oil Produced</th>
             <th>Meal Produced</th>
             <th>Loss</th>
@@ -84,12 +78,12 @@ export default function Dashboard({ setView }) {
         </tbody>
       </table>
 
-      <h3 style={{ marginTop: "20px" }}>📌 Production Summary</h3>
-      <p>Total Quantity Used: {totalQuantity.toFixed(2)} kg</p>
-      <p>Total Oil Produced: {totalOil.toFixed(2)} kg</p>
-      <p>Total Meal Produced: {totalMeal.toFixed(2)} kg</p>
-      <p>Total Loss: {totalLoss.toFixed(2)} kg</p>
-      <p>Total Cost: {totalCost.toFixed(2)} BDT</p>
+      <h3 style={{ marginTop: "20px" }}>📌 Summary</h3>
+      <p>Total Quantity Used: {summary.quantity.toFixed(2)} kg</p>
+      <p>Total Oil Produced: {summary.oil.toFixed(2)} kg</p>
+      <p>Total Meal Produced: {summary.meal.toFixed(2)} kg</p>
+      <p>Total Loss: {summary.loss.toFixed(2)} kg</p>
+      <p>Total Cost: {summary.cost.toFixed(2)} BDT</p>
     </div>
   );
 }
