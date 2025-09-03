@@ -1,24 +1,21 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import RawMaterial from "./pages/RawMaterial";
+import OilProduction from "./pages/OilProduction";
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [view, setView] = useState("dashboard");
+
+  if (!isLoggedIn) return <Login onLogin={() => setIsLoggedIn(true)} />;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      {view === "dashboard" && <Dashboard setView={setView} />}
+      {view === "rawMaterial" && <RawMaterial setView={setView} />}
+      {view === "oilProduction" && <OilProduction setView={setView} />}
+    </>
   );
 }
 
