@@ -1,17 +1,16 @@
 import { useState } from "react";
-import Dashboard from "./pages/Dashboard";
 import RawMaterial from "./pages/RawMaterial";
 import OilProduction from "./pages/OilProduction";
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
-  const [view, setView] = useState("dashboard"); // "dashboard", "rawMaterial", "oilProduction"
-  const [editProductionIndex, setEditProductionIndex] = useState(null);
+  const [view, setView] = useState("dashboard");
 
   return (
-    <>
-      {view === "dashboard" && <Dashboard setView={setView} setEditProductionIndex={setEditProductionIndex} />}
+    <div>
+      {view === "dashboard" && <Dashboard setView={setView} />}
       {view === "rawMaterial" && <RawMaterial setView={setView} />}
-      {view === "oilProduction" && <OilProduction setView={setView} editIndex={editProductionIndex} setEditIndex={setEditProductionIndex} />}
-    </>
+      {view === "oilProduction" && <OilProduction setView={setView} />}
+    </div>
   );
 }

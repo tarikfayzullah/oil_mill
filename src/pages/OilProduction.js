@@ -1,164 +1,120 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function OilProduction({ setView }) {
-  const [materials, setMaterials] = useState([]);
-  const [yields, setYields] = useState({}); // প্রতি লটের Yield Data
   const [productions, setProductions] = useState([]);
+  const [rawUsed, setRawUsed] = useState("");
+  const [oilProduced, setOilProduced] = useState("");
 
-  // Yield setup
-  const [selectedLot, setSelectedLot] = useState("");
-  const [oilPerMon, setOilPerMon] = useState("");
+  const MON_KG = 40; // প্রতি মন কেজিতে
+  const LOSS_PER_MANE = 1.5; // প্রতি মন খইল/ঘাটতি
 
-  // Daily Production
-  const [prodDate, setProdDate] = useState("");
-  const [prodLot, setProdLot] = useState("");
-  const [prodQtyKg, setProdQtyKg] = useState("");
+  const fetchProductions = async () => {
+    const res = await axios.get("http://localhost:5000/api/oil-production");
+    setProductions(res.data.data);
+  };
 
   useEffect(() => {
-    const savedMaterials = JSON.parse(localStorage.getItem("materials")) || [];
-    setMaterials(savedMaterials);
-
-    const savedYields = JSON.parse(localStorage.getItem("yields")) || {};
-    setYields(savedYields);
-
-    const savedProductions = JSON.parse(localStorage.getItem("productions")) || [];
-    setProductions(savedProductions);
+    fetchProductions();
   }, []);
 
-  // ১ম ভাগ → Yield Setup
-  const handleYieldSave = () => {
-    if (!selectedLot || !oilPerMon) return alert("লট এবং প্রতি মনের তেল লিখুন!");
-    const oil = Number(oilPerMon);
-    const loss = 1.5; // fixed প্রতি 40kg
-    const meal = 40 - oil - loss;
+  const handleSave = async () => {
+    if (!rawUsed || !oilProduced) return alert("সব এন্ট্রি দিন!");
 
-    const updated = { ...yields, [selectedLot]: { oil, loss, meal } };
-    setYields(updated);
-    localStorage.setItem("yields", JSON.stringify(updated));
+    const rawKg = Number(rawUsed);
+    const oilKg = Number(oilProduced);
 
-    setSelectedLot("");
-    setOilPerMon("");
+    const expectedLoss = rawKg / MON_KG * LOSS_PER_MANE;
+    let mealProduced = rawKg - oilKg - expectedLoss;
+    let deficit = 0;
+    if (mealProduced < 0) {
+      deficit = Math.abs(mealProduced);
+      mealProduced = 0;
+    }
+
+    const res = await axios.post("http://localhost:5000/api/oil-production", {
+      rawUsed: rawKg,
+      oilProduced: oilKg,
+      mealProduced: mealProduced.toFixed(2),
+      loss: expectedLoss.toFixed(2),
+      deficit: deficit.toFixed(2),
+      date: new Date().toLocaleDateString(),
+    });
+
+    setRawUsed("");
+    setOilProduced("");
+    setProductions([...productions, res.data.data]);
   };
 
-  // ২য় ভাগ → Daily Production Entry
-  const handleProductionSave = () => {
-    if (!prodDate || !prodLot || !prodQtyKg) return alert("Date, Lot, Quantity দিন!");
-    if (!yields[prodLot]) return alert("এই লটের Yield সেট করা হয়নি!");
-
-    const qty = Number(prodQtyKg);
-    const yieldData = yields[prodLot];
-
-    const oil = (qty / 40) * yieldData.oil;
-    const loss = (qty / 40) * yieldData.loss;
-    const meal = (qty / 40) * yieldData.meal;
-
-    const newProd = {
-      date: prodDate,
-      lot: prodLot,
-      qty,
-      oil,
-      meal,
-      loss,
-    };
-
-    const updated = [...productions, newProd];
-    setProductions(updated);
-    localStorage.setItem("productions", JSON.stringify(updated));
-
-    // Stock থেকে minus
-    const updatedMaterials = materials.map((m, i) =>
-      i.toString() === prodLot
-        ? { ...m, quantityKg: m.quantityKg - qty }
-        : m
-    );
-    setMaterials(updatedMaterials);
-    localStorage.setItem("materials", JSON.stringify(updatedMaterials));
-
-    setProdDate("");
-    setProdLot("");
-    setProdQtyKg("");
-  };
-
-  // ৩য় ভাগ → Reports
-  const totalOil = productions.reduce((sum, p) => sum + p.oil, 0);
-  const totalMeal = productions.reduce((sum, p) => sum + p.meal, 0);
-  const totalLoss = productions.reduce((sum, p) => sum + p.loss, 0);
+  // টোটাল হিসাব
+  const totalRaw = productions.reduce((acc, p) => acc + Number(p.rawUsed), 0);
+  const totalOil = productions.reduce((acc, p) => acc + Number(p.oilProduced), 0);
+  const totalMeal = productions.reduce((acc, p) => acc + Number(p.mealProduced), 0);
+  const totalLoss = productions.reduce((acc, p) => acc + Number(p.loss), 0);
+  const totalDeficit = productions.reduce((acc, p) => acc + Number(p.deficit || 0), 0);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>🛢️ Oil Production Entry</h2>
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", background: "#f3f6f9" }}>
+      <h2 style={{ color: "#1f2937" }}>🛢️ Oil Production Entry</h2>
+      <button onClick={() => setView("dashboard")} style={{ marginBottom: "20px" }}>⬅️ Back</button>
 
-      {/* ১ম ভাগ */}
-      <h3>Yield Setup</h3>
-      <select value={selectedLot} onChange={(e) => setSelectedLot(e.target.value)}>
-        <option value="">-- Select Lot --</option>
-        {materials.map((m, i) => (
-          <option key={i} value={i}>
-            {m.date} - {m.materialName} ({m.quantityKg} kg left)
-          </option>
-        ))}
-      </select>
-      <input
-        type="number"
-        placeholder="Oil per Mon (kg)"
-        value={oilPerMon}
-        onChange={(e) => setOilPerMon(e.target.value)}
-      />
-      <button onClick={handleYieldSave}>Save Yield</button>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <input
+          type="number"
+          placeholder="Raw Used (kg)"
+          value={rawUsed}
+          onChange={e => setRawUsed(e.target.value)}
+          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+        />
+        <input
+          type="number"
+          placeholder="Oil Produced (kg)"
+          value={oilProduced}
+          onChange={e => setOilProduced(e.target.value)}
+          style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+        />
+        <button onClick={handleSave} style={{ background: "#ef4444", color: "white", border: "none", padding: "8px 16px", borderRadius: "6px", cursor: "pointer" }}>💾 Save</button>
+      </div>
 
-      {/* ২য় ভাগ */}
-      <h3 style={{ marginTop: "20px" }}>Daily Production</h3>
-      <input type="date" value={prodDate} onChange={(e) => setProdDate(e.target.value)} />
-      <select value={prodLot} onChange={(e) => setProdLot(e.target.value)}>
-        <option value="">-- Select Lot --</option>
-        {materials.map((m, i) => (
-          <option key={i} value={i}>
-            {m.date} - {m.materialName} ({m.quantityKg} kg left)
-          </option>
-        ))}
-      </select>
-      <input
-        type="number"
-        placeholder="Quantity Crushed (kg)"
-        value={prodQtyKg}
-        onChange={(e) => setProdQtyKg(e.target.value)}
-      />
-      <button onClick={handleProductionSave}>Save Production</button>
-
-      {/* ৩য় ভাগ */}
-      <h3 style={{ marginTop: "20px" }}> Production Report</h3>
-      <table border="1" cellPadding="5">
-        <thead>
+      <h3 style={{ marginTop: "20px" }}>📋 Production List</h3>
+      <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+        <thead style={{ background: "#e5e7eb" }}>
           <tr>
-            <th>Date</th>
-            <th>Lot</th>
-            <th>Qty Crushed (kg)</th>
-            <th>Oil (kg)</th>
-            <th>Meal (kg)</th>
-            <th>Loss (kg)</th>
+            <th style={thStyle}>Date</th>
+            <th style={thStyle}>Raw Used</th>
+            <th style={thStyle}>Oil Produced</th>
+            <th style={thStyle}>Meal Produced</th>
+            <th style={thStyle}>Loss</th>
+            <th style={thStyle}>Deficit</th>
           </tr>
         </thead>
         <tbody>
           {productions.map((p, i) => (
-            <tr key={i}>
+            <tr key={i} style={{ textAlign: "center", borderBottom: "1px solid #ddd" }}>
               <td>{p.date}</td>
-              <td>{p.lot}</td>
-              <td>{p.qty.toFixed(2)}</td>
-              <td>{p.oil.toFixed(2)}</td>
-              <td>{p.meal.toFixed(2)}</td>
-              <td>{p.loss.toFixed(2)}</td>
+              <td>{p.rawUsed}</td>
+              <td>{p.oilProduced}</td>
+              <td>{p.mealProduced}</td>
+              <td>{p.loss}</td>
+              <td>{p.deficit || 0}</td>
             </tr>
           ))}
+          <tr style={{ fontWeight: "bold", background: "#f9fafb" }}>
+            <td>🧮 Total</td>
+            <td>{totalRaw}</td>
+            <td>{totalOil}</td>
+            <td>{totalMeal}</td>
+            <td>{totalLoss}</td>
+            <td>{totalDeficit}</td>
+          </tr>
         </tbody>
       </table>
-
-      <h4 style={{ marginTop: "20px" }}>
-        ✅ Total Oil: {totalOil.toFixed(2)} kg | Meal: {totalMeal.toFixed(2)} kg | Loss: {totalLoss.toFixed(2)} kg
-      </h4>
-
-      <button onClick={() => setView("dashboard")} style={{ marginTop: "20px" }}>
-        ⬅️ Back to Dashboard
-      </button>
     </div>
   );
 }
+
+const thStyle = {
+  padding: "8px",
+  borderBottom: "2px solid #d1d5db",
+  textAlign: "center",
+};

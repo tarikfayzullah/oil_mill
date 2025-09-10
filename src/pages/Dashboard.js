@@ -1,89 +1,103 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-export default function Dashboard({ setView, setEditProductionIndex }) {
-  const [productions, setProductions] = useState([]);
+export default function Dashboard({ setView }) {
+  const [currentStock, setCurrentStock] = useState({ raw: 0, oil: 0, meal: 0 });
+
+  const fetchStock = async () => {
+    try {
+      // Raw Material Entry
+      const rawRes = await axios.get("http://localhost:5000/api/raw-materials");
+      const rawEntries = rawRes.data.data;
+      const totalRawPurchased = rawEntries.reduce((acc, r) => acc + Number(r.quantity), 0);
+
+      // Oil Production Entry
+      const oilRes = await axios.get("http://localhost:5000/api/oil-production");
+      const oilEntries = oilRes.data.data;
+
+      let totalRawUsed = 0;
+      let totalOilProduced = 0;
+      let totalMealProduced = 0;
+
+      oilEntries.forEach(p => {
+        totalRawUsed += Number(p.rawUsed);
+        totalOilProduced += Number(p.oilProduced);
+        totalMealProduced += Number(p.mealProduced);
+      });
+
+      // Current stock calculation
+      const rawStock = totalRawPurchased - totalRawUsed;
+      const oilStock = totalOilProduced;
+      const mealStock = totalMealProduced;
+
+      setCurrentStock({ raw: rawStock, oil: oilStock, meal: mealStock });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("productions")) || [];
-    setProductions(saved.map(p => ({
-      ...p,
-      quantity: Number(p.quantity),
-      oilProduced: Number(p.oilProduced),
-      mealProduced: Number(p.mealProduced),
-      loss: Number(p.loss),
-      productionCost: Number(p.productionCost),
-      totalCost: Number(p.totalCost)
-    })));
+    fetchStock();
+    const interval = setInterval(fetchStock, 5000); // 5 সেকেন্ডে আপডেট
+    return () => clearInterval(interval);
   }, []);
 
-  const handleEdit = (index) => {
-    setEditProductionIndex(index);
-    setView("oilProduction");
-  };
-
-  const handleDelete = (index) => {
-    if (!window.confirm("আপনি কি এই এন্ট্রি মুছে দিতে চান?")) return;
-    const updated = productions.filter((_, i) => i !== index);
-    setProductions(updated);
-    localStorage.setItem("productions", JSON.stringify(updated));
-  };
-
-  const summary = productions.reduce((acc, p) => {
-    acc.quantity += p.quantity;
-    acc.oil += p.oilProduced;
-    acc.meal += p.mealProduced;
-    acc.loss += p.loss;
-    acc.cost += p.totalCost;
-    return acc;
-  }, { quantity: 0, oil: 0, meal: 0, loss: 0, cost: 0 });
-
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>📊 Dashboard</h2>
-      <button onClick={() => setView("rawMaterial")}>🌾 Raw Material Entry</button> &nbsp;
-      <button onClick={() => setView("oilProduction")}>🛢️ Oil Production Entry</button>
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", backgroundColor: "#f4f4f9", minHeight: "100vh" }}>
+      <h2 style={{ color: "#333" }}>📊 Dashboard</h2>
 
-      <h3 style={{ marginTop: "20px" }}>📋 Production List</h3>
-      <table border="1" cellPadding="5">
+      <div style={{ marginBottom: "20px" }}>
+        <button
+          onClick={() => setView("rawMaterial")}
+          style={{ marginRight: "10px", padding: "8px 16px", backgroundColor: "#4caf50", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
+        >
+          🌾 Raw Material Entry
+        </button>
+        <button
+          onClick={() => setView("oilProduction")}
+          style={{ padding: "8px 16px", backgroundColor: "#2196f3", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
+        >
+          🛢️ Oil Production Entry
+        </button>
+      </div>
+
+      <h3 style={{ color: "#555" }}>📦 Current Stock</h3>
+      <table
+        style={{
+          width: "60%",
+          borderCollapse: "collapse",
+          marginTop: "10px",
+          backgroundColor: "#fff",
+          boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+        }}
+      >
         <thead>
-          <tr>
-            <th>Date</th>
-            <th>Material</th>
-            <th>Quantity</th>
-            <th>Oil Produced</th>
-            <th>Meal Produced</th>
-            <th>Loss</th>
-            <th>Production Cost</th>
-            <th>Total Cost</th>
-            <th>Actions</th>
+          <tr style={{ backgroundColor: "#2196f3", color: "#fff" }}>
+            <th style={thStyle}>Raw Mustard (মন)</th>
+            <th style={thStyle}>Oil (কেজি)</th>
+            <th style={thStyle}>Meal (কেজি)</th>
           </tr>
         </thead>
         <tbody>
-          {productions.map((p, i) => (
-            <tr key={i}>
-              <td>{p.date}</td>
-              <td>{p.materialName}</td>
-              <td>{p.quantity.toFixed(2)}</td>
-              <td>{p.oilProduced.toFixed(2)}</td>
-              <td>{p.mealProduced.toFixed(2)}</td>
-              <td>{p.loss.toFixed(2)}</td>
-              <td>{p.productionCost.toFixed(2)}</td>
-              <td>{p.totalCost.toFixed(2)}</td>
-              <td>
-                <button onClick={() => handleEdit(i)}>Edit</button> &nbsp;
-                <button onClick={() => handleDelete(i)}>Delete</button>
-              </td>
-            </tr>
-          ))}
+          <tr>
+            <td style={tdStyle}>{currentStock.raw}</td>
+            <td style={tdStyle}>{currentStock.oil}</td>
+            <td style={tdStyle}>{currentStock.meal}</td>
+          </tr>
         </tbody>
       </table>
-
-      <h3 style={{ marginTop: "20px" }}>📌 Summary</h3>
-      <p>Total Quantity Used: {summary.quantity.toFixed(2)} kg</p>
-      <p>Total Oil Produced: {summary.oil.toFixed(2)} kg</p>
-      <p>Total Meal Produced: {summary.meal.toFixed(2)} kg</p>
-      <p>Total Loss: {summary.loss.toFixed(2)} kg</p>
-      <p>Total Cost: {summary.cost.toFixed(2)} BDT</p>
     </div>
   );
 }
+
+const thStyle = {
+  padding: "10px",
+  border: "1px solid #ddd",
+  textAlign: "center",
+};
+
+const tdStyle = {
+  padding: "10px",
+  border: "1px solid #ddd",
+  textAlign: "center",
+};
