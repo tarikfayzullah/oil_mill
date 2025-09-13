@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-export default function OilProduction({ setView }) {
+export default function OilProduction() {
+  const navigate = useNavigate();
   const [productions, setProductions] = useState([]);
   const [rawUsed, setRawUsed] = useState("");
   const [oilProduced, setOilProduced] = useState("");
@@ -10,8 +12,12 @@ export default function OilProduction({ setView }) {
   const LOSS_PER_MANE = 1.5; // প্রতি মন খইল/ঘাটতি
 
   const fetchProductions = async () => {
-    const res = await axios.get("http://localhost:5000/api/oil-production");
-    setProductions(res.data.data);
+    try {
+      const res = await axios.get("http://localhost:5000/api/oil-production");
+      setProductions(res.data.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -32,18 +38,23 @@ export default function OilProduction({ setView }) {
       mealProduced = 0;
     }
 
-    const res = await axios.post("http://localhost:5000/api/oil-production", {
-      rawUsed: rawKg,
-      oilProduced: oilKg,
-      mealProduced: mealProduced.toFixed(2),
-      loss: expectedLoss.toFixed(2),
-      deficit: deficit.toFixed(2),
-      date: new Date().toLocaleDateString(),
-    });
+    try {
+      const res = await axios.post("http://localhost:5000/api/oil-production", {
+        rawUsed: rawKg,
+        oilProduced: oilKg,
+        mealProduced: mealProduced.toFixed(2),
+        loss: expectedLoss.toFixed(2),
+        deficit: deficit.toFixed(2),
+        date: new Date().toLocaleDateString(),
+      });
 
-    setRawUsed("");
-    setOilProduced("");
-    setProductions([...productions, res.data.data]);
+      setRawUsed("");
+      setOilProduced("");
+      setProductions([...productions, res.data.data]);
+    } catch (err) {
+      console.error(err);
+      alert("Save failed!");
+    }
   };
 
   // টোটাল হিসাব
@@ -56,24 +67,54 @@ export default function OilProduction({ setView }) {
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", background: "#f3f6f9" }}>
       <h2 style={{ color: "#1f2937" }}>🛢️ Oil Production Entry</h2>
-      <button onClick={() => setView("dashboard")} style={{ marginBottom: "20px" }}>⬅️ Back</button>
+
+      <button
+        onClick={() => navigate("/dashboard")}
+        style={{
+          margin: "10px",
+          backgroundColor: "#3354e7ff",
+          color: "white",
+          padding: "10px 30px",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          fontSize: "16px",
+          transition: "background-color 0.3s ease",
+        }}
+        onMouseOver={(e) => (e.target.style.backgroundColor = "#016e0bff")}
+        onMouseOut={(e) => (e.target.style.backgroundColor = "#3354e7ff")}
+      >
+        ⬅️ Back
+      </button>
 
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <input
           type="number"
           placeholder="Raw Used (kg)"
           value={rawUsed}
-          onChange={e => setRawUsed(e.target.value)}
+          onChange={(e) => setRawUsed(e.target.value)}
           style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
         />
         <input
           type="number"
           placeholder="Oil Produced (kg)"
           value={oilProduced}
-          onChange={e => setOilProduced(e.target.value)}
+          onChange={(e) => setOilProduced(e.target.value)}
           style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
         />
-        <button onClick={handleSave} style={{ background: "#ef4444", color: "white", border: "none", padding: "8px 16px", borderRadius: "6px", cursor: "pointer" }}>💾 Save</button>
+        <button
+          onClick={handleSave}
+          style={{
+            background: "#ef4444",
+            color: "white",
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
+          💾 Save
+        </button>
       </div>
 
       <h3 style={{ marginTop: "20px" }}>📋 Production List</h3>
@@ -91,21 +132,21 @@ export default function OilProduction({ setView }) {
         <tbody>
           {productions.map((p, i) => (
             <tr key={i} style={{ textAlign: "center", borderBottom: "1px solid #ddd" }}>
-              <td>{p.date}</td>
-              <td>{p.rawUsed}</td>
-              <td>{p.oilProduced}</td>
-              <td>{p.mealProduced}</td>
-              <td>{p.loss}</td>
-              <td>{p.deficit || 0}</td>
+              <td style={tdStyle}>{p.date}</td>
+              <td style={tdStyle}>{p.rawUsed}</td>
+              <td style={tdStyle}>{p.oilProduced}</td>
+              <td style={tdStyle}>{p.mealProduced}</td>
+              <td style={tdStyle}>{p.loss}</td>
+              <td style={tdStyle}>{p.deficit || 0}</td>
             </tr>
           ))}
           <tr style={{ fontWeight: "bold", background: "#f9fafb" }}>
-            <td>🧮 Total</td>
-            <td>{totalRaw}</td>
-            <td>{totalOil}</td>
-            <td>{totalMeal}</td>
-            <td>{totalLoss}</td>
-            <td>{totalDeficit}</td>
+            <td style={tdStyle}>🧮 Total</td>
+            <td style={tdStyle}>{totalRaw}</td>
+            <td style={tdStyle}>{totalOil}</td>
+            <td style={tdStyle}>{totalMeal}</td>
+            <td style={tdStyle}>{totalLoss}</td>
+            <td style={tdStyle}>{totalDeficit}</td>
           </tr>
         </tbody>
       </table>
@@ -115,6 +156,12 @@ export default function OilProduction({ setView }) {
 
 const thStyle = {
   padding: "8px",
-  borderBottom: "2px solid #d1d5db",
+  border: "2px solid #d1d5db",
+  textAlign: "center",
+};
+
+const tdStyle = {
+  padding: "8px",
+  border: "2px solid #d1d5db",
   textAlign: "center",
 };

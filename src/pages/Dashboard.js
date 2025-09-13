@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-export default function Dashboard({ setView }) {
+export default function Dashboard() {
   const [currentStock, setCurrentStock] = useState({ raw: 0, oil: 0, meal: 0 });
+  const navigate = useNavigate();
 
   const fetchStock = async () => {
     try {
@@ -48,13 +50,13 @@ export default function Dashboard({ setView }) {
 
       <div style={{ marginBottom: "20px" }}>
         <button
-          onClick={() => setView("rawMaterial")}
+          onClick={() => navigate("/raw-material")}
           style={{ marginRight: "10px", padding: "8px 16px", backgroundColor: "#4caf50", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
         >
           🌾 Raw Material Entry
         </button>
         <button
-          onClick={() => setView("oilProduction")}
+          onClick={() => navigate("/oil-production")}
           style={{ padding: "8px 16px", backgroundColor: "#2196f3", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
         >
           🛢️ Oil Production Entry
@@ -73,9 +75,9 @@ export default function Dashboard({ setView }) {
       >
         <thead>
           <tr style={{ backgroundColor: "#2196f3", color: "#fff" }}>
-            <th style={thStyle}>Raw Mustard (মন)</th>
-            <th style={thStyle}>Oil (কেজি)</th>
-            <th style={thStyle}>Meal (কেজি)</th>
+            <th style={thStyle}>Raw Mustard (kg)</th>
+            <th style={thStyle}>Oil (kg)</th>
+            <th style={thStyle}>Meal (kg)</th>
           </tr>
         </thead>
         <tbody>
